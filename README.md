@@ -1,7 +1,6 @@
 # parse-vue-spa-livequery
 This is a parse-server  project, with default config for `dashboard`, `graphQL` and `vue`(SPA not nuxt). Helping you to setup everything within a minute. 
 
-[demo](https://parse-vue-spa-livequery.herokuapp.com/#/secret)
 
 ## vue-spa 
 `http://localhost:8081/#/secret` (dev) or `http://localhost:1337/#/secret` (prod)
@@ -77,43 +76,55 @@ The routing logic, the often seen types are `requiredPublic`, `requiredLogin` an
 
 
 
-### 4 Routing
-The routing logic, the often seen types are `requiredPublic`, `requiredLogin` and `requiredLogout`. And config the type on each `route item`, inside `meta: {permission}`
+### 4 Config
+
+#### 4.1 Server
+It is needed to start a second http server with different port, as the code in `./server/configs/livequery.js`
+
+and require it on `./server/index.js`
 ```js
-const routes = [
-  {
-    path: '/',
-    name: 'home',
-    meta: {permission: requiredPublic},
-    component: Home
-  },
-  {
-    path: '/login',
-    name: 'login',
-    meta: {permission: requiredLogout},
-    component: Login
-  },
-  {
-    path: '/logout',
-    name: 'logout',
-    meta: {permission: requiredLogin},
-    component: Logout
-  },
-  {
-    path: '/secret',
-    name: 'secret',
-    meta: {permission: requiredLogin},
-    component: Secret
-  },
-  {
-    path: '/error',
-    name: 'error',
-    meta: {permission: requiredPublic},
-    component: () => import('../views/Error.vue')
-  }
-]
+
+const express = require('express');
+const app = express();
+
+//...
+
+require('./configs/livequery').init(app)
+
+//...
+
+app.listen(port, function() {
+  console.log(`parse-server-example running on port: http://${HOST_URL}:${port}.`);
+});
 ```
 
+
+#### 4.1 Client
+adding livequery when initing parse client `./src/lib/parse`
+```js
+Parse.liveQueryServerURL = 'ws://localhost:2337/';
+```
+
+and subscribe it on vue components `./src/views/Secret`
+
+```js
+    initLivequery: async function() {
+      const query = new Parse.Query('Chatrooms')
+      this.livequerySubscription = await query.subscribe()
+      this.livequerySubscription.on('open', () => {
+        console.log('this.livequerySubscription opened');
+      });
+      this.livequerySubscription.on('create', (cRoom) => {
+        this.msgList.unshift(cRoom.toJSON());
+      });
+      this.livequerySubscription.on('enter', (cRoom) => {
+        console.log(cRoom.get('msg'), ' enter'); // This should output Mengyan
+      });
+      this.livequerySubscription.on('update', (cRoom) => {
+        console.log(cRoom.get('msg'), 'update'); // This should output 100
+      })
+    },
+```
 
 
 ### Customize configuration
@@ -122,3 +133,4 @@ See [Configuration Reference](https://cli.vuejs.org/config/).
 
 ## Reference:
  - https://github.com/wahengchang/parse-vue-auth-router
+ - https://github.com/parse-server-base/parse-vue-spa-server
